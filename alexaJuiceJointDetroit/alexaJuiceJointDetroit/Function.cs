@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Amazon.Lambda.Core;
 using Newtonsoft.Json;
+using Alexa.NET;
 using Alexa.NET.Response;
 using Alexa.NET.Request;
 using Alexa.NET.Request.Type;
@@ -86,9 +87,19 @@ namespace alexaJuiceJointDetroit
                         (innerResponse as PlainTextOutputSpeech).Text = resource.HelpMessage;
                         break;
                     case "GetSmoothies":
-                        log.LogLine($"GetFactIntent sent: send new fact");
+                        log.LogLine($"GetSmoothies: send smoothies");
                         innerResponse = new PlainTextOutputSpeech();
                         (innerResponse as PlainTextOutputSpeech).Text = GetSmoothies(resource);
+                        break;
+                    case "GetIngredients":
+                        log.LogLine($"GetIngredients: get smoothie slot");
+                        response = GetIngredients(resource, intentRequest, input, response);
+                        innerResponse = response.Response.OutputSpeech;
+                        break;
+                    case "FilterGetSmoothies":
+                        log.LogLine($"FilterGetSmoothies: get ingredient slot");
+                        response = FilterGetSmoothies(resource, intentRequest, input, response);
+                        innerResponse = response.Response.OutputSpeech;
                         break;
                     default:
                         log.LogLine($"Unknown intent: " + intentRequest.Intent.Name);
@@ -98,11 +109,22 @@ namespace alexaJuiceJointDetroit
                 }
             }
 
+            
             response.Response.OutputSpeech = innerResponse;
             response.Version = "1.0";
             log.LogLine($"Skill Response Object...");
             log.LogLine(JsonConvert.SerializeObject(response));
             return response;
+        }
+
+        private SkillResponse FilterGetSmoothies(SmoothieResource resource, IntentRequest intentRequest, SkillRequest input, SkillResponse response)
+        {
+            throw new NotImplementedException();
+        }
+
+        private SkillResponse GetIngredients(SmoothieResource resource, IntentRequest intentRequest, SkillRequest input, SkillResponse response)
+        {           
+            throw new NotImplementedException();
         }
         #endregion
         public static string CombineElements(string[] elements)
