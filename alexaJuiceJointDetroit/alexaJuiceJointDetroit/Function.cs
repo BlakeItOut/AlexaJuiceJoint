@@ -125,18 +125,18 @@ namespace alexaJuiceJointDetroit
                     // Pre-fill slots: update the intent object with slot values for which
                     // you have defaults, then return Dialog.Delegate with this updated intent
                     // in the updatedIntent property.
-                    log.LogLine($"GetSlot: Started");
+                    log.LogLine($"GetIngredient: Started");
                     response = ResponseBuilder.DialogDelegate(input.Session, intentRequest.Intent);
                     break;
                 case DialogState.InProgress:
                     // return a Dialog.Delegate directive with no updatedIntent property.
-                    log.LogLine($"GetSlot: InProgress");
+                    log.LogLine($"GetIngredient: InProgress");
                     response = ResponseBuilder.DialogDelegate(input.Session);
                     break;
                 case DialogState.Completed:
                     // Dialog is now complete and all required slots should be filled,
                     // so call your normal intent handler. 
-                    log.LogLine($"GetSlot: Completed");
+                    log.LogLine($"GetIngredient: Completed");
                     IOutputSpeech innerResponse = null;
                     innerResponse = new PlainTextOutputSpeech();
                     (innerResponse as PlainTextOutputSpeech).Text = GetSmoothies(resource, (smoothie => smoothie.Ingredients.Contains(intentRequest.Intent.Slots["Ingredient"].Value)));
@@ -144,8 +144,8 @@ namespace alexaJuiceJointDetroit
                     break;
                 default:
                     // return a Dialog.Delegate directive with no updatedIntent property.
-                    //response = ResponseBuilder.DialogElicitSlot(GetInnerResponse("What medicine will you be administering?"), "medicineName", input.Session, intentRequest.Intent);
-                    log.LogLine($"GetSlot: Default.");
+                    //response = ResponseBuilder.DialogElicitSlot(GetInnerResponse("What ingredient do you want to filter the smoothies by?"), "Ingredient", input.Session, intentRequest.Intent);
+                    log.LogLine($"GetIngredient: Default.");
                     log.LogLine($"Input: {JsonConvert.SerializeObject(input)}");
                     log.LogLine($"Intent Request: {JsonConvert.SerializeObject(intentRequest)}");
                     response = ResponseBuilder.DialogDelegate(input.Session);
@@ -163,18 +163,18 @@ namespace alexaJuiceJointDetroit
                     // Pre-fill slots: update the intent object with slot values for which
                     // you have defaults, then return Dialog.Delegate with this updated intent
                     // in the updatedIntent property.
-                    log.LogLine($"GetSlot: Started");
+                    log.LogLine($"GetSmoothie: Started");
                     response = ResponseBuilder.DialogDelegate(input.Session, intentRequest.Intent);
                     break;
                 case DialogState.InProgress:
                     // return a Dialog.Delegate directive with no updatedIntent property.
-                    log.LogLine($"GetSlot: InProgress");
+                    log.LogLine($"GetSmoothie: InProgress");
                     response = ResponseBuilder.DialogDelegate(input.Session);
                     break;
                 case DialogState.Completed:
                     // Dialog is now complete and all required slots should be filled,
                     // so call your normal intent handler. 
-                    log.LogLine($"GetSlot: Completed");
+                    log.LogLine($"GetSmoothie: Completed");
                     IOutputSpeech innerResponse = null;
                     innerResponse = new PlainTextOutputSpeech();
                     (innerResponse as PlainTextOutputSpeech).Text = GetSmoothie(resource, intentRequest.Intent.Slots["Smoothie"].Value);
@@ -182,8 +182,8 @@ namespace alexaJuiceJointDetroit
                     break;
                 default:
                     // return a Dialog.Delegate directive with no updatedIntent property.
-                    //response = ResponseBuilder.DialogElicitSlot(GetInnerResponse("What medicine will you be administering?"), "medicineName", input.Session, intentRequest.Intent);
-                    log.LogLine($"GetSlot: Default.");
+                    //response = ResponseBuilder.DialogElicitSlot(GetInnerResponse("What smoothie do you want the ingredients for?"), "Smoothie", input.Session, intentRequest.Intent);
+                    log.LogLine($"GetSmoothie: Default.");
                     log.LogLine($"Input: {JsonConvert.SerializeObject(input)}");
                     log.LogLine($"Intent Request: {JsonConvert.SerializeObject(intentRequest)}");
                     response = ResponseBuilder.DialogDelegate(input.Session);
