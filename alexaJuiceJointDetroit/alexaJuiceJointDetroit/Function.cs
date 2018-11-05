@@ -27,14 +27,14 @@ namespace alexaJuiceJointDetroit
             enUSResource.LaunchMessageReprompt = "Try asking me to tell you the smoothies.";
             enUSResource.AskMessage = " What else would you like to know?";
             enUSResource.Smoothies = new Dictionary<string, Smoothie>();
-            enUSResource.Smoothies.Add("great gonzo", new Smoothie(new string[] { "Blueberry", "Pineapple", "Ginger", "Banana", "Orange", "Lemon", "Coconut Water" }, "Great Gonzo"));
-            enUSResource.Smoothies.Add("maui waui", new Smoothie(new string[] { "Avocado", "Lime", "Pineapple", "Baby Greens", "Mango", "Cilantro", "Cayenne", "Coconut Water" }, "Maui Waui"));
-            enUSResource.Smoothies.Add("atomic energy", new Smoothie(new string[] { "Mango", "Carrot", "Tumeric", "Ginger", "Pineapple", "Orange", "Banana", "Lemon", "Coconut Water" }, "Atomic Energy"));
-            enUSResource.Smoothies.Add("sweetart", new Smoothie(new string[] { "Blueberry", "Raspberry", "Strawberry", "Orange", "Kiwi", "Banana", "Coconut Water", "Honey" }, "Sweetart"));
-            enUSResource.Smoothies.Add("tutti-frutti", new Smoothie(new string[] { "Strawberry", "Banana", "Pineapple", "Raspberry" }, "Tutti Frutti"));
-            enUSResource.Smoothies.Add("jungle juice", new Smoothie(new string[] { "Pineapple", "Mango", "Baby Greens", "Banana", "Coconut Water" }, "Jungle Juice"));
-            enUSResource.Smoothies.Add("the boss", new Smoothie(new string[] { "Matcha", "Mango", "Avocado", "Baby Greens", "Banana", "Almond Milk", "Agave" }, "The Boss"));
-            enUSResource.Smoothies.Add("blue berry yum yum", new Smoothie(new string[] { "Blueberry", "Banana", "Almond Butter", "Almond Milk", "Honey" }, "Blue Berry Yum Yum"));
+            enUSResource.Smoothies.Add("great gonzo", new Smoothie(new string[] { "blueberry", "pineapple", "ginger", "banana", "orange", "lemon", "coconut water" }, "great gonzo"));
+            enUSResource.Smoothies.Add("maui waui", new Smoothie(new string[] { "avocado", "lime", "pineapple", "baby greens", "mango", "cilantro", "cayenne", "coconut water" }, "maui waui"));
+            enUSResource.Smoothies.Add("atomic energy", new Smoothie(new string[] { "mango", "carrot", "tumeric", "ginger", "pineapple", "orange", "banana", "lemon", "coconut water" }, "atomic energy"));
+            enUSResource.Smoothies.Add("sweetart", new Smoothie(new string[] { "blueberry", "raspberry", "strawberry", "orange", "kiwi", "banana", "coconut water", "honey" }, "sweetart"));
+            enUSResource.Smoothies.Add("tutti-frutti", new Smoothie(new string[] { "strawberry", "banana", "pineapple", "raspberry" }, "tutti frutti"));
+            enUSResource.Smoothies.Add("jungle juice", new Smoothie(new string[] { "pineapple", "mango", "baby greens", "banana", "coconut water" }, "jungle juice"));
+            enUSResource.Smoothies.Add("the boss", new Smoothie(new string[] { "matcha", "mango", "avocado", "baby greens", "banana", "almond milk", "agave" }, "the boss"));
+            enUSResource.Smoothies.Add("blue berry yum yum", new Smoothie(new string[] { "blueberry", "banana", "almond butter", "almond milk", "honey" }, "blue berry yum yum"));
             return enUSResource;
         }
 
@@ -93,12 +93,12 @@ namespace alexaJuiceJointDetroit
                         break;
                     case "GetIngredients":
                         log.LogLine($"GetIngredients: get smoothie slot");
-                        response = GetIngredients(resource, intentRequest, input, response);
+                        response = GetIngredients(resource, intentRequest, input, response, log);
                         innerResponse = response.Response.OutputSpeech;
                         break;
                     case "FilterGetSmoothies":
                         log.LogLine($"FilterGetSmoothies: get ingredient slot");
-                        response = FilterGetSmoothies(resource, intentRequest, input, response);
+                        response = FilterGetSmoothies(resource, intentRequest, input, response, log);
                         innerResponse = response.Response.OutputSpeech;
                         break;
                     default:
@@ -117,18 +117,92 @@ namespace alexaJuiceJointDetroit
             return response;
         }
 
-        private SkillResponse FilterGetSmoothies(SmoothieResource resource, IntentRequest intentRequest, SkillRequest input, SkillResponse response)
+        public SkillResponse FilterGetSmoothies(SmoothieResource resource, IntentRequest intentRequest, SkillRequest input, SkillResponse response, ILambdaLogger log)
         {
-            throw new NotImplementedException();
+            switch (intentRequest.DialogState)
+            {
+                case DialogState.Started:
+                    // Pre-fill slots: update the intent object with slot values for which
+                    // you have defaults, then return Dialog.Delegate with this updated intent
+                    // in the updatedIntent property.
+                    log.LogLine($"GetSlot: Started");
+                    response = ResponseBuilder.DialogDelegate(input.Session, intentRequest.Intent);
+                    break;
+                case DialogState.InProgress:
+                    // return a Dialog.Delegate directive with no updatedIntent property.
+                    log.LogLine($"GetSlot: InProgress");
+                    response = ResponseBuilder.DialogDelegate(input.Session);
+                    break;
+                case DialogState.Completed:
+                    // Dialog is now complete and all required slots should be filled,
+                    // so call your normal intent handler. 
+                    log.LogLine($"GetSlot: Completed");
+                    IOutputSpeech innerResponse = null;
+                    innerResponse = new PlainTextOutputSpeech();
+                    (innerResponse as PlainTextOutputSpeech).Text = GetSmoothies(resource, (smoothie => smoothie.Ingredients.Contains(intentRequest.Intent.Slots["Ingredient"].Value)));
+                    response.Response.OutputSpeech = innerResponse;
+                    break;
+                default:
+                    // return a Dialog.Delegate directive with no updatedIntent property.
+                    //response = ResponseBuilder.DialogElicitSlot(GetInnerResponse("What medicine will you be administering?"), "medicineName", input.Session, intentRequest.Intent);
+                    log.LogLine($"GetSlot: Default.");
+                    log.LogLine($"Input: {JsonConvert.SerializeObject(input)}");
+                    log.LogLine($"Intent Request: {JsonConvert.SerializeObject(intentRequest)}");
+                    response = ResponseBuilder.DialogDelegate(input.Session);
+                    log.LogLine($"Response: {JsonConvert.SerializeObject(response)}");
+                    break;
+            }
+            return response;
         }
 
-        private SkillResponse GetIngredients(SmoothieResource resource, IntentRequest intentRequest, SkillRequest input, SkillResponse response)
-        {           
-            throw new NotImplementedException();
+        public SkillResponse GetIngredients(SmoothieResource resource, IntentRequest intentRequest, SkillRequest input, SkillResponse response, ILambdaLogger log)
+        {
+            switch (intentRequest.DialogState)
+            {
+                case DialogState.Started:
+                    // Pre-fill slots: update the intent object with slot values for which
+                    // you have defaults, then return Dialog.Delegate with this updated intent
+                    // in the updatedIntent property.
+                    log.LogLine($"GetSlot: Started");
+                    response = ResponseBuilder.DialogDelegate(input.Session, intentRequest.Intent);
+                    break;
+                case DialogState.InProgress:
+                    // return a Dialog.Delegate directive with no updatedIntent property.
+                    log.LogLine($"GetSlot: InProgress");
+                    response = ResponseBuilder.DialogDelegate(input.Session);
+                    break;
+                case DialogState.Completed:
+                    // Dialog is now complete and all required slots should be filled,
+                    // so call your normal intent handler. 
+                    log.LogLine($"GetSlot: Completed");
+                    IOutputSpeech innerResponse = null;
+                    innerResponse = new PlainTextOutputSpeech();
+                    (innerResponse as PlainTextOutputSpeech).Text = GetSmoothie(resource, intentRequest.Intent.Slots["Smoothie"].Value);
+                    response.Response.OutputSpeech = innerResponse;
+                    break;
+                default:
+                    // return a Dialog.Delegate directive with no updatedIntent property.
+                    //response = ResponseBuilder.DialogElicitSlot(GetInnerResponse("What medicine will you be administering?"), "medicineName", input.Session, intentRequest.Intent);
+                    log.LogLine($"GetSlot: Default.");
+                    log.LogLine($"Input: {JsonConvert.SerializeObject(input)}");
+                    log.LogLine($"Intent Request: {JsonConvert.SerializeObject(intentRequest)}");
+                    response = ResponseBuilder.DialogDelegate(input.Session);
+                    log.LogLine($"Response: {JsonConvert.SerializeObject(response)}");
+                    break;
+            }
+            return response;
         }
         #endregion
         public static string CombineElements(string[] elements)
         {
+            if (elements == null)
+            {
+                return null;
+            }
+            else if(elements.Length == 1)
+            {
+                return elements[0];
+            }
             string CombinedElements = "";
             for (int i = 0; i < elements.Length-1; i++)
             {
@@ -136,7 +210,9 @@ namespace alexaJuiceJointDetroit
             }
             return $"{CombinedElements}and {elements.Last()}";
         }
-        public static string GetSmoothies(SmoothieResource resource) => CombineElements(resource.Smoothies.Values.ToList().Select(smoothie => smoothie.PrintName).ToArray());
+        public static string GetSmoothie(SmoothieResource resource, string key) => CombineElements(resource.Smoothies[key].Ingredients);
+        public static string GetSmoothies(SmoothieResource resource) => GetSmoothies(resource, (smoothie => true));
+        public static string GetSmoothies(SmoothieResource resource, Func<Smoothie, bool> smoothieFilter) => CombineElements(resource.Smoothies.Values.Where(smoothieFilter).Select(smoothie => smoothie.PrintName).ToArray());
 
         public class SmoothieResource
         {
