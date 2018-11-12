@@ -15,39 +15,72 @@ namespace alexaJuiceJointDetroit.Tests
     public class FunctionTest
     {
 
-        static Function.SmoothieResource resource = Function.GetResource();
         [Fact]
         public void GetSmoothies_ReturnsStringOfSmoothies_True()
         {
-            var actual = Function.GetSmoothies(resource);
-            var expected = "great gonzo, maui waui, atomic energy, sweetart, tutti frutti, jungle juice, the boss, and blue berry yum yum";
+            Function.resource = Function.GetResource();
+            var actual = Function.GetSmoothies();
+            var expected = "the boss, summer blast, pb and j, jungle juice, atomic energy, d's delight, blue nut, juicy fruit, basic bitch, and the rihanna";
             Assert.Equal(expected, actual);
         }
 
         [Fact]
         public void CombineElements_ReturnStringOfElementsWithAnd_True()
         {
-            var target = resource.Smoothies["tutti-frutti"];
+            Function.resource = Function.GetResource();
+            var target = Function.resource.Smoothies["the boss"];
             var actual = Function.CombineElements(target.Ingredients);
-            var expected = "strawberry, banana, pineapple, and raspberry";
-            Assert.Equal(expected, actual);
-        }
-
-        [Fact]
-        public void GetSmoothie_ReturnStringOfIngredientsForASmoothie_True()
-        {
-            var target = "tutti-frutti";
-            var actual = Function.GetSmoothie(resource, target);
-            var expected = "strawberry, banana, pineapple, and raspberry";
+            var expected = "matcha, mango, avocado, baby greens, banana, almond milk, and agave";
             Assert.Equal(expected, actual);
         }
 
         [Fact]
         public void GetSmoothies_ReturntStringOfSmoothiesFilteredByIngredient_True()
         {
+            Function.resource = Function.GetResource();
             var target = "mango";
-            var actual = Function.GetSmoothies(resource, (smoothie => smoothie.Ingredients.Contains(target)));
-            var expected = "maui waui, atomic energy, jungle juice, and the boss";
+            var actual = Function.GetSmoothies(smoothie => smoothie.Ingredients.Contains(target));
+            var expected = "the boss, summer blast, jungle juice, atomic energy, d's delight, blue nut, juicy fruit, basic bitch, and the rihanna";
+            Assert.Equal(expected, actual);
+        }
+
+        [Fact]
+        public void OpenNow_TooEarly_True()
+        {
+            Function.resource = Function.GetResource();
+            var target = new DateTime(2018, 11, 12, 14, 0, 0);
+            var actual = Function.OpenNow(target);
+            var expected = "The juice joint is not open yet. It opens at 10:00 AM.";
+            Assert.Equal(expected, actual);
+        }
+
+        [Fact]
+        public void OpenNow_TooLate_True()
+        {
+            Function.resource = Function.GetResource();
+            var target = new DateTime(2018, 11, 13, 1, 0, 0);
+            var actual = Function.OpenNow(target);
+            var expected = $"Sorry, it's closed now. {Function.GetHours()}";
+            Assert.Equal(expected, actual);
+        }
+
+        [Fact]
+        public void OpenNow_ClosedDayOfWeek_True()
+        {
+            Function.resource = Function.GetResource();
+            var target = new DateTime(2018, 11, 11, 10, 0, 0);
+            var actual = Function.OpenNow(target);
+            var expected = $"Sorry, it's not open today. {Function.GetHours()}";
+            Assert.Equal(expected, actual);
+        }
+
+        [Fact]
+        public void OpenNow_Open_True()
+        {
+            Function.resource = Function.GetResource();
+            var target = new DateTime(2018, 11, 12, 17, 0, 0);
+            var actual = Function.OpenNow(target);
+            var expected = "The juice joint is open now! It closes at 7:00 PM.";
             Assert.Equal(expected, actual);
         }
     }

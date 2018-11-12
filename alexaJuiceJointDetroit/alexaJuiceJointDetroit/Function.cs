@@ -7,6 +7,8 @@ using Alexa.NET.Response;
 using Alexa.NET.Request;
 using Alexa.NET.Request.Type;
 using System;
+using Alexa.NET.Response.Directive;
+using System.Text.RegularExpressions;
 
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
@@ -16,181 +18,320 @@ namespace alexaJuiceJointDetroit
 {
     public class Function
     {
-        public static SmoothieResource GetResource()
-        {
-            SmoothieResource enUSResource = new SmoothieResource("en-US");
-            enUSResource.SkillName = "Juice Joint";
-            enUSResource.HelpMessage = "You can ask me for the names of the smoothies, ask about their ingredients, or even search for a smoothie by ingredients. If you want to exit, just say exit...What can I help you with ?";
-            enUSResource.HelpReprompt = "What can I help you with?";
-            enUSResource.StopMessage = "Goodbye!";
-            enUSResource.LaunchMessage = "Welcome to Juice Joint. I know the smoothies and their ingredients at the Juice Joint. What would you like to know?";
-            enUSResource.LaunchMessageReprompt = "Try asking me to tell you the smoothies.";
-            enUSResource.AskMessage = " What else would you like to know?";
-            enUSResource.Smoothies = new Dictionary<string, Smoothie>();
-            enUSResource.Smoothies.Add("great gonzo", new Smoothie(new string[] { "blueberry", "pineapple", "ginger", "banana", "orange", "lemon", "coconut water" }, "great gonzo"));
-            enUSResource.Smoothies.Add("maui waui", new Smoothie(new string[] { "avocado", "lime", "pineapple", "baby greens", "mango", "cilantro", "cayenne", "coconut water" }, "maui waui"));
-            enUSResource.Smoothies.Add("atomic energy", new Smoothie(new string[] { "mango", "carrot", "tumeric", "ginger", "pineapple", "orange", "banana", "lemon", "coconut water" }, "atomic energy"));
-            enUSResource.Smoothies.Add("sweetart", new Smoothie(new string[] { "blueberry", "raspberry", "strawberry", "orange", "kiwi", "banana", "coconut water", "honey" }, "sweetart"));
-            enUSResource.Smoothies.Add("tutti-frutti", new Smoothie(new string[] { "strawberry", "banana", "pineapple", "raspberry" }, "tutti frutti"));
-            enUSResource.Smoothies.Add("jungle juice", new Smoothie(new string[] { "pineapple", "mango", "baby greens", "banana", "coconut water" }, "jungle juice"));
-            enUSResource.Smoothies.Add("the boss", new Smoothie(new string[] { "matcha", "mango", "avocado", "baby greens", "banana", "almond milk", "agave" }, "the boss"));
-            enUSResource.Smoothies.Add("blue berry yum yum", new Smoothie(new string[] { "blueberry", "banana", "almond butter", "almond milk", "honey" }, "blue berry yum yum"));
-            return enUSResource;
-        }
-
         #region Conversation
+        private SkillResponse response = null;
+        private ILambdaContext context = null;
+        public static SmoothieResource resource = null;
+        const string SMOOTHIES = "Smoothie";
+        const string INGREDIENTS = "Ingredient";
+        const string DAYOFWEEK = "DayOfTheWeek";
+        
         /// <summary>
         /// Application entry point
         /// </summary>
         /// <param name="input"></param>
         /// <param name="ctx"></param>
         /// <returns></returns>
-        public SkillResponse FunctionHandler(SkillRequest input, ILambdaContext context)
+        public SkillResponse FunctionHandler(SkillRequest input, ILambdaContext ctx)
         {
-            SkillResponse response = new SkillResponse();
-            response.Response = new ResponseBody();
-            response.Response.ShouldEndSession = false;
-            IOutputSpeech innerResponse = null;
-            var log = context.Logger;
-            log.LogLine($"Skill Request Object:");
-            log.LogLine(JsonConvert.SerializeObject(input));
-
-            var resource = GetResource();
-
-            if (input.GetRequestType() == typeof(LaunchRequest))
+            context = ctx;
+            try
             {
-                log.LogLine($"Default Launch made: Alexa, open Juice Joint");
-                innerResponse = new PlainTextOutputSpeech();
-                (innerResponse as PlainTextOutputSpeech).Text = resource.LaunchMessage;
-            }
-            else if (input.GetRequestType() == typeof(IntentRequest))
-            {
-                var intentRequest = (IntentRequest)input.Request;
+                response = new SkillResponse();
+                response.Response = new ResponseBody();
+                response.Response.ShouldEndSession = false;
+                response.Version = "1.0";
 
-                switch (intentRequest.Intent.Name)
+                resource = GetResource();
+
+                if (input.GetRequestType() == typeof(LaunchRequest))
                 {
-                    case "AMAZON.CancelIntent":
-                        log.LogLine($"AMAZON.CancelIntent: send StopMessage");
-                        innerResponse = new PlainTextOutputSpeech();
-                        (innerResponse as PlainTextOutputSpeech).Text = resource.StopMessage;
-                        response.Response.ShouldEndSession = true;
-                        break;
-                    case "AMAZON.StopIntent":
-                        log.LogLine($"AMAZON.StopIntent: send StopMessage");
-                        innerResponse = new PlainTextOutputSpeech();
-                        (innerResponse as PlainTextOutputSpeech).Text = resource.StopMessage;
-                        response.Response.ShouldEndSession = true;
-                        break;
-                    case "AMAZON.HelpIntent":
-                        log.LogLine($"AMAZON.HelpIntent: send HelpMessage");
-                        innerResponse = new PlainTextOutputSpeech();
-                        (innerResponse as PlainTextOutputSpeech).Text = resource.HelpMessage;
-                        break;
-                    case "GetSmoothies":
-                        log.LogLine($"GetSmoothies: send smoothies");
-                        innerResponse = new PlainTextOutputSpeech();
-                        (innerResponse as PlainTextOutputSpeech).Text = GetSmoothies(resource);
-                        break;
-                    case "GetIngredients":
-                        log.LogLine($"GetIngredients: get smoothie slot");
-                        response = GetIngredients(resource, intentRequest, input, response, log);
-                        innerResponse = response.Response.OutputSpeech;
-                        break;
-                    case "FilterGetSmoothies":
-                        log.LogLine($"FilterGetSmoothies: get ingredient slot");
-                        response = FilterGetSmoothies(resource, intentRequest, input, response, log);
-                        innerResponse = response.Response.OutputSpeech;
-                        break;
-                    default:
-                        log.LogLine($"Unknown intent: " + intentRequest.Intent.Name);
-                        innerResponse = new PlainTextOutputSpeech();
-                        (innerResponse as PlainTextOutputSpeech).Text = resource.HelpReprompt;
-                        break;
+                    ProcessLaunchRequest(response.Response);
+                }
+                else
+                {
+                    if (input.GetRequestType() == typeof(IntentRequest))
+                    {
+                        var intentRequest = (IntentRequest)input.Request;
+                        if (IsDialogIntentRequest(intentRequest))
+                        {
+                            if (!IsDialogSequenceComplete(intentRequest))
+                            {
+                                CreateDelegateResponse();
+                                return response;
+                            }
+                        }
+                        if(!ProcessDialogRequest(intentRequest, response))
+                        {
+                            response.Response.OutputSpeech = ProcessIntentRequest(intentRequest);
+                        }
+                    }
+                }
+                Log(JsonConvert.SerializeObject(response));
+                return response;
+            }
+            catch (Exception ex)
+            {
+                Log($"error : {ex.Message}");
+            }
+            return null;   
+        }
+
+        private IOutputSpeech ProcessIntentRequest(IntentRequest intentRequest)
+        {
+            IOutputSpeech innerResponse = new PlainTextOutputSpeech();
+
+            switch (intentRequest.Intent.Name)
+            {
+                case "GetSmoothies":
+                    innerResponse = new SsmlOutputSpeech();
+                    (innerResponse as SsmlOutputSpeech).Ssml = $"{GetSmoothies()}. {resource.AskMessage}";
+                    break;
+                case "GetAllHours":
+                    innerResponse = new SsmlOutputSpeech();
+                    (innerResponse as SsmlOutputSpeech).Ssml = $"{GetHours()} {resource.AskMessage}";
+                    break;
+                case "OpenNow":
+                    innerResponse = new SsmlOutputSpeech();
+                    (innerResponse as SsmlOutputSpeech).Ssml = $"{OpenNow(intentRequest.Timestamp)} {resource.AskMessage}";
+                    break;
+                case BuiltInIntent.Cancel:
+                case BuiltInIntent.Stop:
+                    (innerResponse as PlainTextOutputSpeech).Text = resource.StopMessage;
+                    response.Response.ShouldEndSession = true;
+                    break;
+                case BuiltInIntent.Help:
+                    (innerResponse as PlainTextOutputSpeech).Text = resource.HelpMessage;
+                    break;
+                default:
+                    (innerResponse as PlainTextOutputSpeech).Text = resource.HelpReprompt;
+                    break;
+            }
+            if(innerResponse.Type == "SSML")
+            {
+                BuildCard(resource.SkillName, (innerResponse as SsmlOutputSpeech).Ssml);
+                (innerResponse as SsmlOutputSpeech).Ssml = SsmlDecorate((innerResponse as SsmlOutputSpeech).Ssml);
+            }
+
+            return innerResponse;
+        }
+
+        public static string GetHours()
+        {
+            return "The juice joint is open from 10 AM to 7 PM Monday through Friday and 10 AM to 5 PM on Saturday.";
+        }
+
+        public static string OpenNow(DateTime timeUtc)
+        {
+            TimeZoneInfo easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+            DateTime now = TimeZoneInfo.ConvertTimeFromUtc(timeUtc, easternZone);
+            string dayOfWeek = now.DayOfWeek.ToString().ToLower();
+            if (!resource.Hours.ContainsKey(dayOfWeek))
+            {
+                return $"Sorry, it's not open today. {GetHours()}";
+            }
+            DateTime open = DateTime.Parse(resource.Hours[dayOfWeek].Open);
+            DateTime close = DateTime.Parse(resource.Hours[dayOfWeek].Close);
+            if (now < open)
+            {
+                return $"The juice joint is not open yet. It opens at {open.ToShortTimeString()}.";
+            }
+            else if (now > close)
+            {
+                return $"Sorry, it's closed now. {GetHours()}";
+            }
+            else
+            {
+                return $"The juice joint is open now! It closes at {close.ToShortTimeString()}.";
+            }
+        }
+
+        private void BuildCard(string title, string output)
+        {
+            if (!String.IsNullOrEmpty(output))
+            {
+                output = Regex.Replace(output, @"<.*?>", "");
+                response.Response.Card = new SimpleCard()
+                {
+                    Title = title,
+                    Content = output,
+                };
+            };
+        }
+
+        private void Log(string text)
+        {
+            if(context != null)
+            {
+                context.Logger.LogLine(text);
+            }
+        }
+
+        private bool ProcessDialogRequest(IntentRequest intentRequest, SkillResponse response)
+        {
+            string speech_message = String.Empty;
+            bool processed = false;
+
+            switch (intentRequest.Intent.Name)
+            {
+                case "GetIngredients":
+                    speech_message = GetIngredients(intentRequest);
+                    if (!String.IsNullOrEmpty(speech_message))
+                    {
+                        response.Response.OutputSpeech = new SsmlOutputSpeech();
+                        (response.Response.OutputSpeech as SsmlOutputSpeech).Ssml = SsmlDecorate(speech_message);
+                    }
+                    processed = true;
+                    break;
+                case "FilterGetSmoothies":
+                    speech_message = FilterGetSmoothies(intentRequest);
+                    if (!String.IsNullOrEmpty(speech_message))
+                    {
+                        response.Response.OutputSpeech = new SsmlOutputSpeech();
+                        (response.Response.OutputSpeech as SsmlOutputSpeech).Ssml = SsmlDecorate(speech_message);
+                    }
+                    processed = true;
+                    break;
+                case "GetHoursForDay":
+                    speech_message = GetHoursForDay(intentRequest);
+                    if (!String.IsNullOrEmpty(speech_message))
+                    {
+                        response.Response.OutputSpeech = new SsmlOutputSpeech();
+                        (response.Response.OutputSpeech as SsmlOutputSpeech).Ssml = SsmlDecorate(speech_message);
+                    }
+                    processed = true;
+                    break;
+            }
+            return processed;
+        }
+
+        private string GetHoursForDay(IntentRequest intentRequest)
+        {
+            string speech_message = String.Empty;
+            if (intentRequest.Intent.Slots.ContainsKey(DAYOFWEEK))
+            {
+                Slot slot = null;
+                if (intentRequest.Intent.Slots.TryGetValue(DAYOFWEEK, out slot))
+                {
+                    if (slot.Value != null && resource.Hours.ContainsKey(slot.Value.ToLower()))
+                    {
+                        Hour hour = resource.Hours[slot.Value.ToLower()];
+                        speech_message = $"The hours for {slot.Value} are {hour.Open} to {hour.Close}. {resource.AskMessage}";
+                    }
+                    else
+                    {
+                        if (slot.Value == null)
+                        {
+                            speech_message = $"That is not a day of the week. {resource.AskMessage}";
+                        }
+                        else
+                        {
+                            speech_message = $"The juice joint is not open or the hours are varied on {slot.Value}. {resource.AskMessage}";
+                        }
+                    }
                 }
             }
-
-            
-            response.Response.OutputSpeech = innerResponse;
-            response.Version = "1.0";
-            log.LogLine($"Skill Response Object...");
-            log.LogLine(JsonConvert.SerializeObject(response));
-            return response;
+            return speech_message;
         }
 
-        public SkillResponse FilterGetSmoothies(SmoothieResource resource, IntentRequest intentRequest, SkillRequest input, SkillResponse response, ILambdaLogger log)
+        private void CreateDelegateResponse()
         {
-            switch (intentRequest.DialogState)
-            {
-                case DialogState.Started:
-                    // Pre-fill slots: update the intent object with slot values for which
-                    // you have defaults, then return Dialog.Delegate with this updated intent
-                    // in the updatedIntent property.
-                    log.LogLine($"GetIngredient: Started");
-                    response = ResponseBuilder.DialogDelegate(input.Session, intentRequest.Intent);
-                    break;
-                case DialogState.InProgress:
-                    // return a Dialog.Delegate directive with no updatedIntent property.
-                    log.LogLine($"GetIngredient: InProgress");
-                    response = ResponseBuilder.DialogDelegate(input.Session);
-                    break;
-                case DialogState.Completed:
-                    // Dialog is now complete and all required slots should be filled,
-                    // so call your normal intent handler. 
-                    log.LogLine($"GetIngredient: Completed");
-                    IOutputSpeech innerResponse = null;
-                    innerResponse = new PlainTextOutputSpeech();
-                    (innerResponse as PlainTextOutputSpeech).Text = GetSmoothies(resource, (smoothie => smoothie.Ingredients.Contains(intentRequest.Intent.Slots["Ingredient"].Value)));
-                    response.Response.OutputSpeech = innerResponse;
-                    break;
-                default:
-                    // return a Dialog.Delegate directive with no updatedIntent property.
-                    //response = ResponseBuilder.DialogElicitSlot(GetInnerResponse("What ingredient do you want to filter the smoothies by?"), "Ingredient", input.Session, intentRequest.Intent);
-                    log.LogLine($"GetIngredient: Default.");
-                    log.LogLine($"Input: {JsonConvert.SerializeObject(input)}");
-                    log.LogLine($"Intent Request: {JsonConvert.SerializeObject(intentRequest)}");
-                    response = ResponseBuilder.DialogDelegate(input.Session);
-                    log.LogLine($"Response: {JsonConvert.SerializeObject(response)}");
-                    break;
-            }
-            return response;
+            response.Response.Directives.Add(new DialogDelegate());
         }
 
-        public SkillResponse GetIngredients(SmoothieResource resource, IntentRequest intentRequest, SkillRequest input, SkillResponse response, ILambdaLogger log)
+        private void ProcessLaunchRequest(ResponseBody response)
         {
-            switch (intentRequest.DialogState)
+            IOutputSpeech innerResponse = new SsmlOutputSpeech();
+            (innerResponse as SsmlOutputSpeech).Ssml = SsmlDecorate(resource.LaunchMessage);
+            response.OutputSpeech = innerResponse;
+            IOutputSpeech prompt = new PlainTextOutputSpeech();
+            (prompt as PlainTextOutputSpeech).Text = resource.LaunchMessageReprompt;
+            response.Reprompt = new Reprompt()
             {
-                case DialogState.Started:
-                    // Pre-fill slots: update the intent object with slot values for which
-                    // you have defaults, then return Dialog.Delegate with this updated intent
-                    // in the updatedIntent property.
-                    log.LogLine($"GetSmoothie: Started");
-                    response = ResponseBuilder.DialogDelegate(input.Session, intentRequest.Intent);
-                    break;
-                case DialogState.InProgress:
-                    // return a Dialog.Delegate directive with no updatedIntent property.
-                    log.LogLine($"GetSmoothie: InProgress");
-                    response = ResponseBuilder.DialogDelegate(input.Session);
-                    break;
-                case DialogState.Completed:
-                    // Dialog is now complete and all required slots should be filled,
-                    // so call your normal intent handler. 
-                    log.LogLine($"GetSmoothie: Completed");
-                    IOutputSpeech innerResponse = null;
-                    innerResponse = new PlainTextOutputSpeech();
-                    (innerResponse as PlainTextOutputSpeech).Text = GetSmoothie(resource, intentRequest.Intent.Slots["Smoothie"].Value);
-                    response.Response.OutputSpeech = innerResponse;
-                    break;
-                default:
-                    // return a Dialog.Delegate directive with no updatedIntent property.
-                    //response = ResponseBuilder.DialogElicitSlot(GetInnerResponse("What smoothie do you want the ingredients for?"), "Smoothie", input.Session, intentRequest.Intent);
-                    log.LogLine($"GetSmoothie: Default.");
-                    log.LogLine($"Input: {JsonConvert.SerializeObject(input)}");
-                    log.LogLine($"Intent Request: {JsonConvert.SerializeObject(intentRequest)}");
-                    response = ResponseBuilder.DialogDelegate(input.Session);
-                    log.LogLine($"Response: {JsonConvert.SerializeObject(response)}");
-                    break;
+                OutputSpeech = prompt
+            };
+        }
+
+        private string SsmlDecorate(string speech)
+        {
+            return $"<speak>{speech}</speak>";
+        }
+
+        private bool IsDialogSequenceComplete(IntentRequest intentRequest)
+        {
+            if (intentRequest.DialogState == DialogState.Completed)
+            {
+                return true;
             }
-            return response;
+            return false;
+        }
+
+        private bool IsDialogIntentRequest(IntentRequest intentRequest)
+        {
+            if (intentRequest.Intent.Slots == null)
+            {
+                return false;
+            }
+            return true;
+        }
+
+        public string FilterGetSmoothies(IntentRequest intentRequest)
+        {
+            string speech_message = string.Empty;
+            var ingredients = resource.Smoothies.Values.SelectMany(smoothie => smoothie.Ingredients).Distinct().ToArray();
+
+            if (intentRequest.Intent.Slots.ContainsKey(INGREDIENTS))
+            {
+                Slot slot = null;
+                if (intentRequest.Intent.Slots.TryGetValue(INGREDIENTS, out slot))
+                {
+                    if (slot.Value != null && ingredients.Contains(slot.Value.ToLower()))
+                    {
+                        speech_message = $"The smoothies with {slot.Value} are {GetSmoothies(smoothie => smoothie.Ingredients.Contains(slot.Value))}. {resource.AskMessage}";
+                    }
+                    else
+                    {
+                        if(slot.Value == null)
+                        {
+                            speech_message = $"There is no smoothie in the database with that but you can always try asking in person as available ingredients change daily. {resource.AskMessage}";
+                        }
+                        else
+                        {
+                            speech_message = $"There is no smoothie in the database with {slot.Value} but you can always try asking in person as available ingredients change daily. {resource.AskMessage}";
+                        }   
+                    }
+                }
+            }
+            return speech_message;
+        }
+
+        public string GetIngredients(IntentRequest intentRequest)
+        {
+            string speech_message = String.Empty;
+            if (intentRequest.Intent.Slots.ContainsKey(SMOOTHIES))
+            {
+                Slot slot = null;
+                if (intentRequest.Intent.Slots.TryGetValue(SMOOTHIES, out slot))
+                {
+                    if(slot.Value != null && resource.Smoothies.ContainsKey(slot.Value.ToLower()))
+                    {
+                        Smoothie smoothie = resource.Smoothies[slot.Value.ToLower()];
+                        speech_message = $"The ingredients for {smoothie.PrintName} are {CombineElements(smoothie.Ingredients)}. {resource.AskMessage}";
+                    }
+                    else
+                    {
+                        if (slot.Value == null)
+                        {
+                            speech_message = $"There is no smoothie in the database called that. It may be an off-the-menu item so you will have to see in-person. {resource.AskMessage}";
+                        }
+                        else
+                        {
+                            speech_message = $"There is no smoothie in the database called {slot.Value}. It may be an off-the-menu item so you will have to see in-person. {resource.AskMessage}";
+                        }
+                    }
+                }
+            }
+            return speech_message;
         }
         #endregion
         public static string CombineElements(string[] elements)
@@ -210,9 +351,8 @@ namespace alexaJuiceJointDetroit
             }
             return $"{CombinedElements}and {elements.Last()}";
         }
-        public static string GetSmoothie(SmoothieResource resource, string key) => CombineElements(resource.Smoothies[key].Ingredients);
-        public static string GetSmoothies(SmoothieResource resource) => GetSmoothies(resource, (smoothie => true));
-        public static string GetSmoothies(SmoothieResource resource, Func<Smoothie, bool> smoothieFilter) => CombineElements(resource.Smoothies.Values.Where(smoothieFilter).Select(smoothie => smoothie.PrintName).ToArray());
+        public static string GetSmoothies() => GetSmoothies(smoothie => true);
+        public static string GetSmoothies(Func<Smoothie, bool> smoothieFilter) => CombineElements(resource.Smoothies.Values.Where(smoothieFilter).Select(smoothie => smoothie.PrintName).ToArray());
 
         public class SmoothieResource
         {
@@ -226,6 +366,8 @@ namespace alexaJuiceJointDetroit
             public string HelpMessage { get; set; }
             public string HelpReprompt { get; set; }
             public string StopMessage { get; set; }
+            public Dictionary<string, Hour> Hours { get; set; } 
+
             public SmoothieResource(string language)
             {
                 Language = language;
@@ -241,6 +383,52 @@ namespace alexaJuiceJointDetroit
 
             public string[] Ingredients { get; set; }
             public string PrintName { get; set; }
+        }
+        public class Hour
+        {
+            public Hour(string open, string close)
+            {
+                Open = open;
+                Close = close;
+            }
+            public string Open { get; set; }
+            public string Close { get; set; }
+        }
+        public static SmoothieResource GetResource()
+        {
+            SmoothieResource enUSResource = new SmoothieResource("en-US");
+            enUSResource.SkillName = "Juice Joint";
+            enUSResource.HelpMessage = "You can ask me for the names of the smoothies, ask about their ingredients, or even search for a smoothie by ingredients. If you want to exit, just say exit...What can I help you with ?";
+            enUSResource.HelpReprompt = " Names of smoothies, ingredients, smoothies by ingredient? Or just say exit to exit...What can I help you with next?";
+            enUSResource.StopMessage = "Goodbye!";
+            enUSResource.LaunchMessage = "Welcome to Juice Joint. I know the smoothies and their ingredients at the Juice Joint. What would you like to know?";
+            enUSResource.LaunchMessageReprompt = "Try asking me to tell you the smoothies.";
+            enUSResource.AskMessage = "What else would you like to know?";
+            enUSResource.Smoothies = new Dictionary<string, Smoothie>();
+            enUSResource.Smoothies.Add("the boss", new Smoothie(new string[] { "matcha", "mango", "avocado", "baby greens", "banana", "almond milk", "agave" }, "the boss"));
+            enUSResource.Smoothies.Add("summer blast", new Smoothie(new string[] { "raspberry", "lemon", "pineapple", "strawberry", "mango", "coconut water", "agave" }, "summer blast"));
+            enUSResource.Smoothies.Add("pb and j", new Smoothie(new string[] { "strawberry", "peanut butter", "banana", "oat", "almond milk", "honey" }, "pb and j"));
+            enUSResource.Smoothies.Add("jungle juice", new Smoothie(new string[] { "pineapple", "mango", "baby greens", "banana", "coconut water" }, "jungle juice"));
+            enUSResource.Smoothies.Add("atomic energy", new Smoothie(new string[] { "mango", "carrot", "tumeric", "ginger", "pineapple", "orange", "banana", "lemon", "coconut water" }, "atomic energy"));
+            enUSResource.Smoothies.Add("d's delight", new Smoothie(new string[] { "blueberry", "mango", "spinach", "ginger", "coconut water", "honey" }, "d's delight"));
+            enUSResource.Smoothies.Add("blue nut", new Smoothie(new string[] { "cold brew coffee", "blueberry", "mango", "banana", "honey", "almond butter", "cinnamon", "almond milk" }, "blue nut"));
+            enUSResource.Smoothies.Add("juicy fruit", new Smoothie(new string[] { "strawberry", "mango", "banana", "orange", "honey", "coconut water" }, "juicy fruit"));
+            enUSResource.Smoothies.Add("basic bitch", new Smoothie(new string[] { "pumpkin puree", "pumpkin pie spice", "banana", "mango", "ginger", "almond butter", "almond milk", "honey" }, "basic bitch"));
+            enUSResource.Smoothies.Add("the rihanna", new Smoothie(new string[] { "strawberry", "pineapple", "mango", "banana", "maca", "cayenne", "ginger", "coconut water", "honey" }, "the rihanna"));
+            //enUSResource.Smoothies.Add("great gonzo", new Smoothie(new string[] { "blueberry", "pineapple", "ginger", "banana", "orange", "lemon", "coconut water" }, "great gonzo"));
+            //enUSResource.Smoothies.Add("maui waui", new Smoothie(new string[] { "avocado", "lime", "pineapple", "baby greens", "mango", "cilantro", "cayenne", "coconut water" }, "maui waui"));
+            //enUSResource.Smoothies.Add("sweetart", new Smoothie(new string[] { "blueberry", "raspberry", "strawberry", "orange", "kiwi", "banana", "coconut water", "honey" }, "sweetart"));
+            //enUSResource.Smoothies.Add("tutti-frutti", new Smoothie(new string[] { "strawberry", "banana", "pineapple", "raspberry" }, "tutti frutti"));            
+            //enUSResource.Smoothies.Add("blue berry yum yum", new Smoothie(new string[] { "blueberry", "banana", "almond butter", "almond milk", "honey" }, "blue berry yum yum"));
+            enUSResource.Hours = new Dictionary<string, Hour>();
+            enUSResource.Hours.Add("monday", new Hour("10:00 AM", "7:00 PM"));
+            enUSResource.Hours.Add("tuesday", new Hour("10:00 AM", "7:00 PM"));
+            enUSResource.Hours.Add("wednesday", new Hour("10:00 AM", "7:00 PM"));
+            enUSResource.Hours.Add("thursday", new Hour("10:00 AM", "7:00 PM"));
+            enUSResource.Hours.Add("friday", new Hour("10:00 AM", "7:00 PM"));
+            enUSResource.Hours.Add("saturday", new Hour("10:00 AM", "5:00 PM"));
+            enUSResource.Hours.Add("weekday", new Hour("10:00 AM", "7:00 PM"));
+            return enUSResource;
         }
     }
 }
