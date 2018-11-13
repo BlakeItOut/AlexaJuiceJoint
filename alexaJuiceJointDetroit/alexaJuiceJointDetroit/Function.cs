@@ -118,13 +118,14 @@ namespace alexaJuiceJointDetroit
 
         public static string GetHours()
         {
-            return "The juice joint is open from 10 AM to 7 PM Monday through Friday and 10 AM to 5 PM on Saturday.";
+            return "The juice joint is open from 10 AM to 7 PM eastern standard time Monday through Friday and 10 AM to 5 PM eastern standard time on Saturday.";
         }
-
-        public static string OpenNow(DateTime timeUtc)
+         
+        public static string OpenNow(DateTime now)
         {
-            TimeZoneInfo easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
-            DateTime now = TimeZoneInfo.ConvertTimeFromUtc(timeUtc, easternZone);
+            //TimeZoneInfo easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+            //DateTime now = TimeZoneInfo.ConvertTimeFromUtc(timeUtc, easternZone);
+            now = now.AddHours(-5);
             string dayOfWeek = now.DayOfWeek.ToString().ToLower();
             if (!resource.Hours.ContainsKey(dayOfWeek))
             {
@@ -134,7 +135,7 @@ namespace alexaJuiceJointDetroit
             DateTime close = DateTime.Parse(resource.Hours[dayOfWeek].Close);
             if (now < open)
             {
-                return $"The juice joint is not open yet. It opens at {open.ToShortTimeString()}.";
+                return $"The juice joint is not open yet. It opens at {open.ToShortTimeString()} eastern standard time.";
             }
             else if (now > close)
             {
@@ -142,7 +143,7 @@ namespace alexaJuiceJointDetroit
             }
             else
             {
-                return $"The juice joint is open now! It closes at {close.ToShortTimeString()}.";
+                return $"The juice joint is open now! It closes at {close.ToShortTimeString()} eastern standard time.";
             }
         }
 
@@ -398,10 +399,10 @@ namespace alexaJuiceJointDetroit
         {
             SmoothieResource enUSResource = new SmoothieResource("en-US");
             enUSResource.SkillName = "Juice Joint";
-            enUSResource.HelpMessage = "You can ask me for the names of the smoothies, ask about their ingredients, or even search for a smoothie by ingredients. If you want to exit, just say exit...What can I help you with ?";
+            enUSResource.HelpMessage = "You can ask me for the names of the smoothies, about their ingredients, what the hours are, if the juice joint is open now, or even search for a smoothie by ingredients. If you want to exit, just say exit...What can I help you with ?";
             enUSResource.HelpReprompt = " Names of smoothies, ingredients, smoothies by ingredient? Or just say exit to exit...What can I help you with next?";
             enUSResource.StopMessage = "Goodbye!";
-            enUSResource.LaunchMessage = "Welcome to Juice Joint. I know the smoothies and their ingredients at the Juice Joint. What would you like to know?";
+            enUSResource.LaunchMessage = "Welcome to Juice Joint. I know the smoothies, their ingredients, and the hours of the Juice Joint. What would you like to know?";
             enUSResource.LaunchMessageReprompt = "Try asking me to tell you the smoothies.";
             enUSResource.AskMessage = "What else would you like to know?";
             enUSResource.Smoothies = new Dictionary<string, Smoothie>();
