@@ -39,9 +39,9 @@ namespace alexaJuiceJointDetroit.Tests
         public void GetSmoothies_ReturntStringOfSmoothiesFilteredByIngredient_True()
         {
             Function.resource = Function.GetResource();
-            var target = "mango";
-            var actual = Function.GetSmoothies(smoothie => smoothie.Ingredients.Contains(target));
-            var expected = "the boss, summer blast, jungle juice, atomic energy, d's delight, blue nut, juicy fruit, basic bitch, and the rihanna";
+            var target = "coffee";
+            var actual = Function.GetSmoothies(smoothie => String.Join("",smoothie.Ingredients).Contains(target));
+            var expected = "blue nut, and coffee nut";
             Assert.Equal(expected, actual);
         }
 
@@ -86,18 +86,18 @@ namespace alexaJuiceJointDetroit.Tests
         //}
 
         [Fact]
-        public void Pluralize_MakeEndInYPlural_True()
+        public void Pluralize_MakeEndInYSingular_True()
         {
-            var actual = new Pluralizer().Pluralize("blueberry");
-            var expected = "blueberries";
+            var actual = new Pluralizer().Singularize("blueberries");
+            var expected = "blueberry";
             Assert.Equal(expected, actual);
         }
 
         [Fact]
         public void Pluralize_MakeEndInVowelPlural_True()
         {
-            var actual = new Pluralizer().Pluralize("avocados");
-            var expected = "avocados";
+            var actual = new Pluralizer().Singularize("blueberry");
+            var expected = "blueberry";
             Assert.Equal(expected, actual);
         }
     }

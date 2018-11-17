@@ -2,13 +2,13 @@ using System.Collections.Generic;
 using System.Linq;
 using Amazon.Lambda.Core;
 using Newtonsoft.Json;
-using Alexa.NET;
 using Alexa.NET.Response;
 using Alexa.NET.Request;
 using Alexa.NET.Request.Type;
 using System;
 using Alexa.NET.Response.Directive;
 using System.Text.RegularExpressions;
+using Pluralize.NET.Core;
 
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
@@ -295,9 +295,10 @@ namespace alexaJuiceJointDetroit
                 Slot slot = null;
                 if (intentRequest.Intent.Slots.TryGetValue(INGREDIENTS, out slot))
                 {
-                    if (slot.Value != null && ingredients.Contains(slot.Value.ToLower()))
+                    var slotLowerSingular = new Pluralizer().Singularize(slot.Value.ToLower());
+                    if (slot.Value != null && ingredients.Contains(slotLowerSingular))
                     {
-                        speech_message = $"The smoothies with {slot.Value} are {GetSmoothies(smoothie => smoothie.Ingredients.Contains(slot.Value))}. {resource.AskMessage}";
+                        speech_message = $"The smoothies with {slot.Value} are {GetSmoothies(smoothie => String.Join("", smoothie.Ingredients).Contains(slotLowerSingular))}. {resource.AskMessage}";
                     }
                     else
                     {
@@ -417,7 +418,7 @@ namespace alexaJuiceJointDetroit
             enUSResource.Smoothies = new Dictionary<string, Smoothie>();
             enUSResource.Smoothies.Add("the boss", new Smoothie(new string[] { "matcha", "mango", "avocado", "baby greens", "banana", "almond milk", "agave" }, "the boss"));
             enUSResource.Smoothies.Add("summer blast", new Smoothie(new string[] { "raspberry", "lemon", "pineapple", "strawberry", "mango", "coconut water", "agave" }, "summer blast"));
-            enUSResource.Smoothies.Add("pb and j", new Smoothie(new string[] { "strawberry", "peanut butter", "banana", "oat", "almond milk", "honey" }, "pb and j"));
+            enUSResource.Smoothies.Add("p.b. and j.", new Smoothie(new string[] { "strawberry", "peanut butter", "banana", "oat", "almond milk", "honey" }, "pb and j"));
             enUSResource.Smoothies.Add("jungle juice", new Smoothie(new string[] { "pineapple", "mango", "baby greens", "banana", "coconut water" }, "jungle juice"));
             enUSResource.Smoothies.Add("atomic energy", new Smoothie(new string[] { "mango", "carrot", "tumeric", "ginger", "pineapple", "orange", "banana", "lemon", "coconut water" }, "atomic energy"));
             enUSResource.Smoothies.Add("d's delight", new Smoothie(new string[] { "blueberry", "mango", "spinach", "ginger", "coconut water", "honey" }, "d's delight"));
@@ -425,6 +426,8 @@ namespace alexaJuiceJointDetroit
             enUSResource.Smoothies.Add("juicy fruit", new Smoothie(new string[] { "strawberry", "mango", "banana", "orange", "honey", "coconut water" }, "juicy fruit"));
             enUSResource.Smoothies.Add("basic bitch", new Smoothie(new string[] { "pumpkin puree", "pumpkin pie spice", "banana", "mango", "ginger", "almond butter", "almond milk", "honey" }, "basic bitch"));
             enUSResource.Smoothies.Add("the rihanna", new Smoothie(new string[] { "strawberry", "pineapple", "mango", "banana", "maca", "cayenne", "ginger", "coconut water", "honey" }, "the rihanna"));
+            enUSResource.Smoothies.Add("coffee nut", new Smoothie(new string[] { "cold brew coffee", "peanut butter", "cinnamon", "cacao", "cayenne", "banana", "mango", "honey", "almond milk" }, "coffee nut"));
+            enUSResource.Smoothies.Add("princess peach", new Smoothie(new string[] { "peaches", "strawberry", "cucumber", "mint", "banana", "ginger", "honey" }, "princess peach"));
             //enUSResource.Smoothies.Add("great gonzo", new Smoothie(new string[] { "blueberry", "pineapple", "ginger", "banana", "orange", "lemon", "coconut water" }, "great gonzo"));
             //enUSResource.Smoothies.Add("maui waui", new Smoothie(new string[] { "avocado", "lime", "pineapple", "baby greens", "mango", "cilantro", "cayenne", "coconut water" }, "maui waui"));
             //enUSResource.Smoothies.Add("sweetart", new Smoothie(new string[] { "blueberry", "raspberry", "strawberry", "orange", "kiwi", "banana", "coconut water", "honey" }, "sweetart"));
