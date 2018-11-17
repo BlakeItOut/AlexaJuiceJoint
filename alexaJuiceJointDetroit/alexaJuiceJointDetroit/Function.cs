@@ -91,6 +91,10 @@ namespace alexaJuiceJointDetroit
                     innerResponse = new SsmlOutputSpeech();
                     (innerResponse as SsmlOutputSpeech).Ssml = $"{GetHours()} {resource.AskMessage}";
                     break;
+                case "GetLocation":
+                    innerResponse = new SsmlOutputSpeech();
+                    (innerResponse as SsmlOutputSpeech).Ssml = $"{GetLocation()} {resource.AskMessage}";
+                    break;
                 case "OpenNow":
                     innerResponse = new SsmlOutputSpeech();
                     (innerResponse as SsmlOutputSpeech).Ssml = $"{OpenNow(intentRequest.Timestamp)} {resource.AskMessage}";
@@ -120,7 +124,12 @@ namespace alexaJuiceJointDetroit
         {
             return "The juice joint is open from 10 AM to 7 PM eastern standard time Monday through Friday and 10 AM to 5 PM eastern standard time on Saturday.";
         }
-         
+
+        public static string GetLocation()
+        {
+            return "The juice joint is located in the back of Marcus Market at 4614 2nd Avenue, Detroit, Michigan 48201.";
+        }
+
         public static string OpenNow(DateTime now)
         {
             //TimeZoneInfo easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
